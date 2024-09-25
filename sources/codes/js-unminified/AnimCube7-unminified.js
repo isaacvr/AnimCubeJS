@@ -1933,8 +1933,8 @@ function AnimCube7(params) {
                 drawSuperArrow(graphics, fillX, fillY, i, scube[i][p * 7 + q], colors[cube[i][p * 7 + q]]);
               }
               else {
-                drawPolygon(graphics, fillX, fillY, colors[cube[i][p * 7 + q]]);
-                fillPolygon(graphics, fillX, fillY, colors[cube[i][p * 7 + q]]);
+                drawPolygon(graphics, fillX, fillY, colors[cube[i][p * 7 + q]], 0.1);
+                fillPolygon(graphics, fillX, fillY, colors[cube[i][p * 7 + q]], 0.1);
               }
             }
           }
@@ -2377,24 +2377,70 @@ function AnimCube7(params) {
     g.stroke();
   }
 
-  function drawPolygon(g, x, y, color) {
+  function getRoundedPath(x, y, roundness) {
+    let len = Math.min(x.length, y.length);
+    let curvePoints = 10;
+    const C2k = [1, 2, 1]; // Combinations(n, k)
+    let newPoints = [];
+
+    for (let i = 0; i < len; i += 1) {
+      let curr = [x[i], y[i]];
+      let prev = [x[(i - 1 + len) % len], y[(i - 1 + len) % len]];
+      let next = [x[(i + 1) % len], y[(i + 1) % len]];
+
+      let v1 = [(prev[0] - curr[0]) * roundness, (prev[1] - curr[1]) * roundness];
+      let v2 = [(next[0] - curr[0]) * roundness, (next[1] - curr[1]) * roundness];
+      let P = [[curr[0] + v1[0], curr[1] + v1[1]], curr, [curr[0] + v2[0], curr[1] + v2[1]]];
+
+      for (let j = 0; j <= curvePoints; j += 1) {
+        let a = j / curvePoints;
+        newPoints.push(
+          P.reduce((ac, p, pos) => {
+            let f = C2k[pos] * Math.pow(1 - a, 2 - pos) * Math.pow(a, pos);
+            return [ac[0] + p[0] * f, ac[1] + p[1] * f];
+          }, [0, 0])
+        );
+      }
+    }
+
+    return newPoints;
+  }
+
+  function drawPolygon(g, x, y, color, roundness = 0) {
     g.beginPath();
-    g.moveTo(x[0], y[0]);
-    g.lineTo(x[1], y[1]);
-    g.lineTo(x[2], y[2]);
-    g.lineTo(x[3], y[3]);
+
+    if (roundness) {
+      let pts = getRoundedPath(x, y, roundness);
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1, maxi = pts.length; i < maxi; i += 1) {
+        g.lineTo(pts[i][0], pts[i][1]);
+      }
+    } else {
+      g.moveTo(x[0], y[0]);
+      for (let i = 1, maxi = x.length; i < maxi; i += 1) {
+        g.lineTo(x[i], y[i]);
+      }
+    }
     g.closePath();
     g.strokeStyle = color;
     g.lineWidth = 0.7 * dpr;
     g.stroke();
   }
 
-  function fillPolygon(g, x, y, color) {
+  function fillPolygon(g, x, y, color, roundness = 0) {
     g.beginPath();
-    g.moveTo(x[0], y[0]);
-    g.lineTo(x[1], y[1]);
-    g.lineTo(x[2], y[2]);
-    g.lineTo(x[3], y[3]);
+    if (roundness) {
+      let pts = getRoundedPath(x, y, roundness);
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1, maxi = pts.length; i < maxi; i += 1) {
+        g.lineTo(pts[i][0], pts[i][1]);
+      }
+    } else {
+      g.moveTo(x[0], y[0]);
+      for (let i = 1, maxi = x.length; i < maxi; i += 1) {
+        g.lineTo(x[i], y[i]);
+      }
+    }
     g.closePath();
     g.fillStyle = color;
     g.fill();
